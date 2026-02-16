@@ -12,7 +12,7 @@ model = joblib.load("outputs/models/churn_model.pkl")
 df = pd.read_csv("data/telco_churn.csv")
 df.drop("customerID", axis=1, inplace=True)
 df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-df["TotalCharges"].fillna(df["TotalCharges"].median(), inplace=True)
+df["TotalCharges"] = df["TotalCharges"].fillna(df["TotalCharges"].median())
 
 df_encoded = pd.get_dummies(df, drop_first=True)
 X = df_encoded.drop("Churn_Yes", axis=1)
