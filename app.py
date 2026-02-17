@@ -1,14 +1,15 @@
-from flask import Flask, render_template, request
+import streamlit as st
 import pandas as pd
 import joblib
-import os
 
-app = Flask(__name__)
+st.set_page_config(page_title="Telecom Churn Predictor", layout="centered")
+
+st.title("Telecom Customer Churn Prediction")
 
 # Load model
 model = joblib.load("outputs/models/churn_model.pkl")
 
-# Recreate feature structure
+# Load dataset to recreate feature structure
 df = pd.read_csv("data/telco_churn.csv")
 df.drop("customerID", axis=1, inplace=True)
 df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
@@ -18,44 +19,57 @@ df_encoded = pd.get_dummies(df, drop_first=True)
 X = df_encoded.drop("Churn_Yes", axis=1)
 model_columns = X.columns
 
+# Input fields
+tenure = st.number_input("Tenure (months)", min_value=0, value=12)
+monthly = st.number_input("Monthly Charges", min_value=0.0, value=70.0)
+total = st.number_input("Total Charges", min_value=0.0, value=800.0)
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+contract = st.selectbox(
+    "Contract Type",
+    ["Month-to-month", "One year", "Two year"]
+)
 
+internet = st.selectbox(
+    "Internet Service",
+    ["DSL", "Fiber optic", "No"]
+)
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    # Numeric inputs
-    tenure = float(request.form["tenure"])
-    monthly = float(request.form["MonthlyCharges"])
-    total = float(request.form["TotalCharges"])
+security = st.selectbox(
+    "Online Security",
+    ["Yes", "No", "No internet service"]
+)
 
-    # Categorical inputs
-    contract = request.form["Contract"]
-    internet = request.form["InternetService"]
-    security = request.form["OnlineSecurity"]
-    support = request.form["TechSupport"]
-    payment = request.form["PaymentMethod"]
-    senior = int(request.form["SeniorCitizen"])
-    dependents = request.form["Dependents"]
+support = st.selectbox(
+    "Tech Support",
+    ["Yes", "No", "No internet service"]
+)
 
-    # Create empty input frame
+payment = st.selectbox(
+    "Payment Method",
+    [
+        "Electronic check",
+        "Mailed check",
+        "Bank transfer (automatic)",
+        "Credit card (automatic)"
+    ]
+)
+
+senior = st.selectbox("Senior Citizen", [0, 1])
+dependents = st.selectbox("Dependents", ["Yes", "No"])
+
+if st.button("Predict Churn"):
     input_data = pd.DataFrame(columns=model_columns)
     input_data.loc[0] = 0
 
-    # Assign numeric values
     input_data["tenure"] = tenure
     input_data["MonthlyCharges"] = monthly
     input_data["TotalCharges"] = total
     input_data["SeniorCitizen"] = senior
 
-    # Helper function for one-hot columns
     def set_if_exists(col):
         if col in input_data.columns:
             input_data[col] = 1
 
-    # Set categorical values
     set_if_exists(f"Contract_{contract}")
     set_if_exists(f"InternetService_{internet}")
     set_if_exists(f"OnlineSecurity_{security}")
@@ -63,21 +77,11 @@ def predict():
     set_if_exists(f"PaymentMethod_{payment}")
     set_if_exists(f"Dependents_{dependents}")
 
-    # Prediction
     prob = model.predict_proba(input_data)[0][1]
 
     if prob < 0.3:
-        result = f"Low churn risk (Probability: {prob:.2f})"
+        st.success(f"Low churn risk (Probability: {prob:.2f})")
     elif prob < 0.6:
-        result = f"Medium churn risk (Probability: {prob:.2f})"
+        st.warning(f"Medium churn risk (Probability: {prob:.2f})")
     else:
-        result = f"High churn risk (Probability: {prob:.2f})"
-
-    return render_template("index.html", prediction_text=result)
-
-
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+        st.error(f"High churn risk (Probability: {prob:.2f})")
