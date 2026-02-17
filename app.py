@@ -20,9 +20,25 @@ X = df_encoded.drop("Churn_Yes", axis=1)
 model_columns = X.columns
 
 # Input fields
-tenure = st.number_input("Tenure (months)", min_value=0, value=12)
-monthly = st.number_input("Monthly Charges", min_value=0.0, value=70.0)
-total = st.number_input("Total Charges", min_value=0.0, value=800.0)
+tenure = st.number_input(
+    "Tenure (months)",
+    min_value=0,
+    value=6
+)
+
+monthly = st.number_input(
+    "Monthly Charges",
+    min_value=0.0,
+    value=100.0,
+    step=10.0
+)
+
+total = st.number_input(
+    "Total Charges",
+    min_value=0.0,
+    value=100.0,
+    step=10.0
+)
 
 contract = st.selectbox(
     "Contract Type",
@@ -54,8 +70,12 @@ payment = st.selectbox(
     ]
 )
 
-senior = st.selectbox("Senior Citizen", [0, 1])
+# Senior citizen as Yes/No
+senior_choice = st.selectbox("Senior Citizen", ["No", "Yes"])
+senior = 1 if senior_choice == "Yes" else 0
+
 dependents = st.selectbox("Dependents", ["Yes", "No"])
+
 
 if st.button("Predict Churn"):
     input_data = pd.DataFrame(columns=model_columns)
